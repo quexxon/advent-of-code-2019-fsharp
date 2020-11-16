@@ -43,3 +43,32 @@ let testDivRem =
         "Advent of Code - Day Four - /%"
         [ test "Fails on division by zero" {
               Expect.throws (fun () -> 1 /% 0 |> ignore) "Division by zero should throw" } ]
+
+[<Tests>]
+let testIsValidPasscodeRedux =
+    testList
+        "Advent of Code - Day Four - isValidPasscode"
+        [ test "Fails with single digit numbers" {
+              let actual, expected = isValidPasscodeRedux 5, Invalid
+              Expect.equal actual expected "All single digit numbers are invalid"
+          }
+          test "Works with any two digit number with doubles" {
+              let actual, expected = isValidPasscodeRedux 55, Valid
+              Expect.equal actual expected "All two digit duplicates are valid"
+          }
+          test "Advent of Code example 1" {
+              let actual, expected = isValidPasscodeRedux 112233, Valid
+              Expect.equal actual expected "112233 is a valid passcode"
+          }
+          test "Advent of Code example 2" {
+              let actual, expected = isValidPasscodeRedux 123444, Invalid
+              Expect.equal actual expected "123444 is an invalid passcode"
+          }
+          test "Advent of Code example 3" {
+              let actual, expected = isValidPasscodeRedux 111122, Valid
+              Expect.equal actual expected "111122 is a valid passcode"
+          }
+          test "Fails with a even numbered large group of duplicates" {
+              let actual, expected = isValidPasscodeRedux 123333, Invalid
+              Expect.equal actual expected "123333 is an invalid passcode"
+          } ]
