@@ -17,9 +17,15 @@ type Segment =
 
     member this.Normalize() =
         if this.IsHorizontal() then
-            if this.P1.X > this.P2.X then { this with P1 = this.P2; P2 = this.P1 } else this
+            if this.P1.X > this.P2.X then
+                { this with P1 = this.P2; P2 = this.P1 }
+            else
+                this
         elif this.IsVertical() then
-            if this.P1.Y > this.P2.Y then { this with P1 = this.P2; P2 = this.P1 } else this
+            if this.P1.Y > this.P2.Y then
+                { this with P1 = this.P2; P2 = this.P1 }
+            else
+                this
         else
             failwith "Invalid segment"
 
@@ -32,12 +38,14 @@ type Segment =
             (that.P1.Y >= this.P1.Y && that.P1.Y <= this.P2.Y)
             || (that.P2.Y >= this.P1.Y && that.P2.Y <= this.P2.Y)
         | (true, false) ->
-            this.P1.X <= that.P1.X
+            this.P1.X
+            <= that.P1.X
             && this.P2.X >= that.P1.X
             && this.P1.Y >= that.P1.Y
             && this.P1.Y <= that.P2.Y
         | (false, true) ->
-            that.P1.X <= this.P1.X
+            that.P1.X
+            <= this.P1.X
             && that.P2.X >= this.P1.X
             && that.P1.Y >= this.P1.Y
             && that.P1.Y <= this.P2.Y
@@ -60,7 +68,8 @@ type Segment =
 
     member this.Length =
         sqrt
-            ((float this.P2.X - float this.P1.X) ** 2.
+            ((float this.P2.X - float this.P1.X)
+             ** 2.
              + (float this.P2.Y - float this.P1.Y) ** 2.)
         |> int
 
@@ -90,9 +99,7 @@ module Direction =
             failwith "Invalid direction format"
 
 let segmentFromDirection start line direction =
-    let { Heading = heading
-          Distance = distance } =
-        Direction.parse direction
+    let { Heading = heading; Distance = distance } = Direction.parse direction
 
     { P1 = start
       P2 =
@@ -171,7 +178,8 @@ type Solution() as self =
                         let distance = calcDistance lines intersection
 
                         match nearest with
-                        | Some current -> if distance < current then nearest <- Some distance
+                        | Some current ->
+                            if distance < current then nearest <- Some distance
                         | None -> nearest <- Some distance
 
         nearest.Value
@@ -190,11 +198,14 @@ type Solution() as self =
                 else
                     let steps' = steps + e.Current.Length
 
-                    if e.MoveNext() then walk steps' else failwith "Point doesn't occur on line"
+                    if e.MoveNext() then
+                        walk steps'
+                    else
+                        failwith "Point doesn't occur on line"
 
             if e.MoveNext() then walk 0 else failwith "Empty line"
 
         let stepsFromOrigin lines point =
-            lines |> Seq.map (stepsToPoint point) |> Seq.sum
+            Seq.sumBy (stepsToPoint point) lines
 
         this.FindNearestIntersection(stepsFromOrigin)
