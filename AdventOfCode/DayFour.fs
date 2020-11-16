@@ -3,9 +3,15 @@ module AdventOfCode.DayFour
 let inline (/%) x y = (x / y, x % y)
 
 let rec padDigits start value places =
-    if places <= 0
-    then start
-    else padDigits (start * 10 + value) value (places - 1)
+    if places > 10
+    then invalidArg "places" "A value greater than 10 for places will overflow Int32 in all cases"
+
+    let result =
+        if places <= 0
+        then start
+        else padDigits (start * 10 + value) value (places - 1)
+
+    if result < start then failwith "Overflow" else result
 
 type Solution() =
     inherit Util.Solution<int>("Day Four", "04.txt")
