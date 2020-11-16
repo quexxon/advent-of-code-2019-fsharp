@@ -33,7 +33,8 @@ let testPadDigits =
                   "A places value greater than 10 should throw"
           }
           test "Fails on overflow" {
-              Expect.throws (fun () -> padDigits Int32.MaxValue 0 1 |> ignore) "Throws on overflow"
+              Expect.throws (fun () -> padDigits Int32.MaxValue 0 1 |> ignore)
+                  "Throws on overflow"
           } ]
 
 [<Tests>]
