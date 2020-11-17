@@ -1,39 +1,7 @@
 module AdventOfCode.DayTwo
 
+open Intcode
 open System.IO
-
-type Instruction =
-    | Add
-    | Multiply
-    | Halt
-
-module Instruction =
-    let private opcodes =
-        Map.ofList [ (1, Add)
-                     (2, Multiply)
-                     (99, Halt) ]
-
-    let parse (opcode: int): Instruction = Map.find opcode opcodes
-
-type Computer(ram: int [], ?pc: int) =
-    let pc = defaultArg pc 0
-
-    member _.Item
-        with get (index) = ram.[index]
-        and set index value = ram.[index] <- value
-
-    member this.Run() =
-        let rec loop pc =
-            match Instruction.parse ram.[pc] with
-            | Halt -> ()
-            | Add ->
-                ram.[ram.[pc + 3]] <- ram.[ram.[pc + 1]] + ram.[ram.[pc + 2]]
-                loop (pc + 4)
-            | Multiply ->
-                ram.[ram.[pc + 3]] <- ram.[ram.[pc + 1]] * ram.[ram.[pc + 2]]
-                loop (pc + 4)
-
-        loop pc
 
 type Solution() as self =
     inherit Util.Solution<int>("Day Two", "02.txt")
@@ -43,7 +11,13 @@ type Solution() as self =
         |> Array.map int
 
     member private __.Run(noun: int, verb: int) =
-        let computer = Computer(Array.copy memory)
+        let computer =
+            Computer
+                ({ Memory = Array.copy memory
+                   Input = 0
+                   Output = 0
+                   IC = 0 })
+
         computer.[1] <- noun
         computer.[2] <- verb
         computer.Run()
