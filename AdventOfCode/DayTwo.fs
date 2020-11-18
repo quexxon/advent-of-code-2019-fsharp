@@ -15,7 +15,7 @@ type Solution() as self =
             Computer
                 ({ Memory = Array.copy memory
                    Input = 0
-                   Output = 0
+                   Output = []
                    IC = 0 })
 
         computer.[1] <- noun

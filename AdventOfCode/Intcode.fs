@@ -8,18 +8,31 @@ module ParameterMode =
     let parse (parameter: int): ParameterMode =
         if parameter = 0 then Position else Immediate
 
+type ParameterPosition =
+    | First = 1
+    | Second = 2
+    | Third = 3
+
+type Parameter =
+    { Mode: ParameterMode
+      Position: ParameterPosition }
+
 type Operation =
     | Add
     | Multiply
     | Halt
     | Read
     | Write
+    | JumpIfTrue
+    | JumpIfFalse
+    | LessThan
+    | Equals
 
 type Instruction =
     { Operation: Operation
-      Parameters: {| A: ParameterMode
-                     B: ParameterMode
-                     C: ParameterMode |}
+      Parameters: {| A: Parameter
+                     B: Parameter
+                     C: Parameter |}
       Length: int }
 
 type Opcode =
@@ -41,6 +54,18 @@ module Instruction =
           { Code = 4
             Operation = Write
             Length = 2 }
+          { Code = 5
+            Operation = JumpIfTrue
+            Length = 3 }
+          { Code = 6
+            Operation = JumpIfFalse
+            Length = 3 }
+          { Code = 7
+            Operation = LessThan
+            Length = 4 }
+          { Code = 8
+            Operation = Equals
+            Length = 4 }
           { Code = 99
             Operation = Halt
             Length = 1 } ]
@@ -52,62 +77,94 @@ module Instruction =
         let parameterModes = instruction / 100
         { Operation = opcode.Operation
           Parameters =
-              {| A = ParameterMode.parse (parameterModes &&& 1)
-                 B = ParameterMode.parse (parameterModes &&& 10)
-                 C = ParameterMode.parse (parameterModes &&& 100) |}
+              {| A =
+                     { Position = ParameterPosition.First
+                       Mode = ParameterMode.parse (parameterModes &&& 1) }
+                 B =
+                     { Position = ParameterPosition.Second
+                       Mode = ParameterMode.parse (parameterModes &&& 10) }
+                 C =
+                     { Position = ParameterPosition.Third
+                       Mode = ParameterMode.parse (parameterModes &&& 100) } |}
           Length = opcode.Length }
 
 type State =
     { Memory: int []
       mutable Input: int
-      mutable Output: int
-      IC: int }
+      mutable Output: int list
+      mutable IC: int }
 
 type Computer(state: State) =
+    member private this.Read(parameter: Parameter) =
+        match parameter.Mode with
+        | Position -> this.[this.[state.IC + int parameter.Position]]
+        | Immediate -> this.[state.IC + int parameter.Position]
+
+    member private this.Write(parameter: Parameter, value: int) =
+        match parameter.Mode with
+        | Position -> this.[this.[state.IC + int parameter.Position]] <- value
+        | Immediate -> failwith "Invalid parameter mode for writing"
+
+    member private __.IncrementIC(instruction: Instruction) =
+        state.IC <- state.IC + instruction.Length
+
+    member __.Input
+        with get () = state.Input
+        and set value = state.Input <- value
+
+    member __.Output = state.Output
+
     member __.Item
         with get (index) = state.Memory.[index]
         and set index value = state.Memory.[index] <- value
 
-    member __.Run() =
-        let rec loop ic =
-            let instruction = Instruction.parse state.Memory.[ic]
+    member this.Run() =
+        let rec loop () =
+            let instruction = Instruction.parse this.[state.IC]
+            let parameters = instruction.Parameters
             match instruction.Operation with
             | Halt -> ()
             | Add ->
-                if instruction.Parameters.C <> Position
-                then failwith "Invalid parameter mode for writing"
-
-                let result =
-                    (match instruction.Parameters.A with
-                     | Position -> state.Memory.[state.Memory.[ic + 1]]
-                     | Immediate -> state.Memory.[ic + 1])
-                    + (match instruction.Parameters.B with
-                       | Position -> state.Memory.[state.Memory.[ic + 2]]
-                       | Immediate -> state.Memory.[ic + 2])
-
-                state.Memory.[state.Memory.[ic + 3]] <- result
-                loop (ic + instruction.Length)
+                let x = this.Read parameters.A
+                let y = this.Read parameters.B
+                this.Write(parameters.C, x + y)
+                this.IncrementIC instruction
+                loop ()
             | Multiply ->
-                if instruction.Parameters.C <> Position
-                then failwith "Invalid parameter mode for writing"
-
-                let result =
-                    (match instruction.Parameters.A with
-                     | Position -> state.Memory.[state.Memory.[ic + 1]]
-                     | Immediate -> state.Memory.[ic + 1])
-                    * (match instruction.Parameters.B with
-                       | Position -> state.Memory.[state.Memory.[ic + 2]]
-                       | Immediate -> state.Memory.[ic + 2])
-
-                state.Memory.[state.Memory.[ic + 3]] <- result
-                loop (ic + instruction.Length)
+                let x = this.Read parameters.A
+                let y = this.Read parameters.B
+                this.Write(parameters.C, x * y)
+                this.IncrementIC instruction
+                loop ()
             | Read ->
-                if instruction.Parameters.A <> Position
-                then failwith "Invalid parameter mode for writing"
-                loop (ic + instruction.Length)
+                this.Write(parameters.A, state.Input)
+                this.IncrementIC instruction
+                loop ()
             | Write ->
-                if instruction.Parameters.A <> Position
-                then failwith "Invalid parameter mode for writing"
-                loop (ic + instruction.Length)
+                state.Output <- (this.Read parameters.A) :: state.Output
+                this.IncrementIC instruction
+                loop ()
+            | JumpIfTrue ->
+                if (this.Read parameters.A) <> 0
+                then state.IC <- this.Read parameters.B
+                else state.IC <- state.IC + instruction.Length
+                loop ()
+            | JumpIfFalse ->
+                if (this.Read parameters.A) = 0
+                then state.IC <- this.Read parameters.B
+                else state.IC <- state.IC + instruction.Length
+                loop ()
+            | LessThan ->
+                let x = this.Read parameters.A
+                let y = this.Read parameters.B
+                this.Write(parameters.C, (if x < y then 1 else 0))
+                this.IncrementIC instruction
+                loop ()
+            | Equals ->
+                let x = this.Read parameters.A
+                let y = this.Read parameters.B
+                this.Write(parameters.C, (if x = y then 1 else 0))
+                this.IncrementIC instruction
+                loop ()
 
-        loop state.IC
+        loop ()
