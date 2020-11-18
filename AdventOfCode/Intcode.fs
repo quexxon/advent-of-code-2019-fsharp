@@ -147,12 +147,12 @@ type Computer(state: State) =
             | JumpIfTrue ->
                 if (this.Read parameters.A) <> 0
                 then state.IC <- this.Read parameters.B
-                else state.IC <- state.IC + instruction.Length
+                else this.IncrementIC instruction
                 loop ()
             | JumpIfFalse ->
                 if (this.Read parameters.A) = 0
                 then state.IC <- this.Read parameters.B
-                else state.IC <- state.IC + instruction.Length
+                else this.IncrementIC instruction
                 loop ()
             | LessThan ->
                 let x = this.Read parameters.A
